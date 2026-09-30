@@ -62,7 +62,7 @@ async def cmd_top(message: types.Message, db: Database):
     text_month = format_leaderboard_message(month_top, "👑 ТОП-5 В ЭТОМ МЕСЯЦЕ")
 
     full_text = f"{text_week}\n\n{'—' * 20}\n\n{text_month}"
-    await message.reply(full_text, parse_mode="Markdown")
+    await message.reply(full_text, parse_mode="HTML")
 
 
 @router.message(Command("winner", "чемпион", "победитель"))

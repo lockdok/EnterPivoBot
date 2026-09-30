@@ -10,11 +10,11 @@ logger = logging.getLogger(__name__)
 
 
 def format_leaderboard_message(leaderboard: list, title: str) -> str:
-    """Format a list of top drinkers into a readable Markdown message."""
+    """Format a list of top drinkers into a readable HTML message."""
     if not leaderboard:
         return f"{title}\n\n🕸 В этом периоде никто не пил... Либо все шифруются, либо пора вызывать врачей!"
 
-    lines = [f"📊 **{title}**\n"]
+    lines = [f"📊 <b>{title}</b>\n"]
     medals = ["🥇", "🥈", "🥉"]
 
     for idx, row in enumerate(leaderboard, start=1):
@@ -22,9 +22,10 @@ def format_leaderboard_message(leaderboard: list, title: str) -> str:
         user_name = f"@{row['username']}" if row['username'] else row['full_name']
         vodka_ml = row['total_vodka']
         drinks_count = row['drinks_count']
-        lines.append(f"{medal} **{user_name}** — **{vodka_ml} мл** водки ({drinks_count} подходов)")
+        lines.append(f"{medal} <b>{user_name}</b> — <b>{vodka_ml} мл</b> водки ({drinks_count} подходов)")
 
     return "\n".join(lines)
+
 
 
 async def send_weekly_reports(bot: Bot, db: Database):
@@ -42,7 +43,7 @@ async def send_weekly_reports(bot: Bot, db: Database):
             top_list = await db.get_leaderboard(chat_id, since_datetime=start_of_week, limit=10)
             text = format_leaderboard_message(top_list, "🏆 ИТОГИ НЕДЕЛИ: АЛКО-РЕЙТИНГ")
             text += "\n\n💡 Недельный рейтинг обновлён. Новый забег начинается прямо сейчас!"
-            await bot.send_message(chat_id=chat_id, text=text, parse_mode="Markdown")
+            await bot.send_message(chat_id=chat_id, text=text, parse_mode="HTML")
         except Exception as e:
             logger.error(f"Failed to send weekly report to chat {chat_id}: {e}")
 
