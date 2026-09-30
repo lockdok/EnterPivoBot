@@ -4,7 +4,7 @@ import logging
 import sys
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
-from aiogram.types import BotCommand, BotCommandScopeAllGroupChats, BotCommandScopeAllPrivateChats
+from aiogram.types import BotCommand, BotCommandScopeDefault, BotCommandScopeAllGroupChats, BotCommandScopeAllPrivateChats
 
 from bot.config import settings
 from bot.database.db import Database
@@ -70,9 +70,10 @@ async def main():
 
     # Register bot commands so they appear in the Telegram menu
     try:
+        await bot.set_my_commands(BOT_COMMANDS, scope=BotCommandScopeDefault())
         await bot.set_my_commands(BOT_COMMANDS, scope=BotCommandScopeAllGroupChats())
         await bot.set_my_commands(BOT_COMMANDS, scope=BotCommandScopeAllPrivateChats())
-        logger.info("Bot commands registered in Telegram menu.")
+        logger.info("Bot commands registered in Telegram menu (default, groups, private).")
     except Exception as e:
         logger.warning(f"Failed to register bot commands: {e}")
 

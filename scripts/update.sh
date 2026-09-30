@@ -51,3 +51,4 @@ if systemctl is-active --quiet enterpivobot; then
 else
     echo "⚠️ Проверьте запуск бота вручную или через systemctl."
 fi
+
