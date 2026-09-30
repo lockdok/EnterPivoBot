@@ -4,7 +4,7 @@ import logging
 import sys
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
-from aiogram.enums import ParseMode
+from aiogram.types import BotCommand, BotCommandScopeAllGroupChats, BotCommandScopeAllPrivateChats
 
 from bot.config import settings
 from bot.database.db import Database
@@ -23,6 +23,16 @@ logging.basicConfig(
 )
 logger = logging.getLogger("EnterPivoBot")
 
+BOT_COMMANDS = [
+    BotCommand(command="drink",    description="Записать выпитое: /drink 500 5 пиво"),
+    BotCommand(command="stats",    description="Личная статистика в водочном эквиваленте"),
+    BotCommand(command="mystats",  description="Детальная статистика по типам напитков"),
+    BotCommand(command="top",      description="Топ-5 чата за неделю и месяц"),
+    BotCommand(command="winner",   description="Действующий алкобарон месяца"),
+    BotCommand(command="cancel",   description="Отменить последнюю запись"),
+    BotCommand(command="help",     description="Как пользоваться ботом"),
+]
+
 
 async def main():
     if not settings.bot_token or settings.bot_token == "CHANGE_ME":
@@ -38,10 +48,14 @@ async def main():
     await db.init_db()
     logger.info(f"Database initialized at {settings.database_path}")
 
-    # Initialize Bot & Dispatcher
+    # Apply pending schema migrations (safe to run every startup)
+    await db.run_migrations()
+    logger.info("Schema migrations applied.")
+
+    # Initialize Bot & Dispatcher (no global parse_mode — set it per-message explicitly)
     bot = Bot(
         token=settings.bot_token,
-        default=DefaultBotProperties(parse_mode=ParseMode.MARKDOWN)
+        default=DefaultBotProperties()
     )
     dp = Dispatcher()
 
@@ -53,6 +67,14 @@ async def main():
     dp.include_router(stats_router)
     dp.include_router(drink_parser_router)
     dp.include_router(roaster_router)
+
+    # Register bot commands so they appear in the Telegram menu
+    try:
+        await bot.set_my_commands(BOT_COMMANDS, scope=BotCommandScopeAllGroupChats())
+        await bot.set_my_commands(BOT_COMMANDS, scope=BotCommandScopeAllPrivateChats())
+        logger.info("Bot commands registered in Telegram menu.")
+    except Exception as e:
+        logger.warning(f"Failed to register bot commands: {e}")
 
     # Initialize Scheduler
     scheduler = setup_scheduler(bot=bot, db=db, timezone=settings.timezone)
@@ -74,4 +96,3 @@ if __name__ == "__main__":
         asyncio.run(main())
     except (KeyboardInterrupt, SystemExit):
         logger.info("Bot stopped.")
-

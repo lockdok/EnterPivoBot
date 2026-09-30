@@ -13,6 +13,7 @@ from bot.keyboards.inline import (
     get_volume_clarification_keyboard,
     get_abv_clarification_keyboard
 )
+from bot.services.classifier import classify_drink, calculate_pure_alcohol_grams
 
 logger = logging.getLogger(__name__)
 router = Router(name="drink_parser")
@@ -38,13 +39,22 @@ async def record_and_notify_drink(
         full_name=user.full_name
     )
 
-    await db.add_drink(
+    drink_id = await db.add_drink(
         user_id=user.id,
         chat_id=message.chat.id,
         drink_name=drink_name,
         volume_ml=volume_ml,
         abv=abv,
         vodka_equiv_ml=vodka_ml
+    )
+
+    category = classify_drink(drink_name, abv)
+    pure_alcohol_g = calculate_pure_alcohol_grams(volume_ml, abv)
+    await db.add_drink_detail(
+        drink_id=drink_id,
+        category=category,
+        brand=drink_name,
+        pure_alcohol_g=pure_alcohol_g
     )
 
     # Check if this user is the active monthly champion

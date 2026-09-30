@@ -32,6 +32,7 @@ ENV/
 # Database
 *.db
 *.sqlite3
+backups/
 
 # IDE / Editor
 .vscode/

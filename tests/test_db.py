@@ -92,3 +92,83 @@ async def test_monthly_winner_storage_and_active_retrieval(temp_db):
     assert active_winner["user_id"] == 777
     assert active_winner["total_vodka_ml"] == 3500.0
 
+
+@pytest.mark.asyncio
+async def test_drink_detail_and_cascade_delete(temp_db):
+    user_id = 55
+    chat_id = -1001
+
+    drink_id = await temp_db.add_drink(
+        user_id=user_id,
+        chat_id=chat_id,
+        drink_name="Пиво Светлое",
+        volume_ml=500.0,
+        abv=5.0,
+        vodka_equiv_ml=62.5
+    )
+    await temp_db.add_drink_detail(
+        drink_id=drink_id,
+        category="пиво",
+        brand="Пиво Светлое",
+        pure_alcohol_g=19.72
+    )
+
+    # Check category stats
+    cat_stats = await temp_db.get_user_category_stats(user_id, chat_id)
+    assert "пиво" in cat_stats
+    assert cat_stats["пиво"]["total_ml"] == 500.0
+    assert cat_stats["пиво"]["total_g"] == 19.7
+    assert cat_stats["пиво"]["count"] == 1
+
+    # Check history
+    history = await temp_db.get_user_drink_history(user_id, chat_id, limit=5)
+    assert len(history) == 1
+    assert history[0]["category"] == "пиво"
+    assert history[0]["pure_alcohol_g"] == 19.72
+
+    # Cascade delete via delete_last_drink
+    deleted = await temp_db.delete_last_drink(user_id, chat_id)
+    assert deleted is not None
+    assert deleted["id"] == drink_id
+
+    # Verify drinks_detail was cascade deleted
+    async with temp_db._connect() as db:
+        async with db.execute("SELECT COUNT(*) FROM drinks_detail WHERE drink_id = ?", (drink_id,)) as cur:
+            row = await cur.fetchone()
+            assert row[0] == 0
+
+    # Stats should now be empty
+    cat_stats_after = await temp_db.get_user_category_stats(user_id, chat_id)
+    assert len(cat_stats_after) == 0
+
+
+@pytest.mark.asyncio
+async def test_migrations_and_backfill(temp_db):
+    # Insert legacy drinks row directly without details
+    async with temp_db._connect() as db:
+        cur = await db.execute(
+            "INSERT INTO drinks (user_id, chat_id, drink_name, volume_ml, abv, vodka_equiv_ml) VALUES (?, ?, ?, ?, ?, ?)",
+            (99, -1001, "Шампанское Абрау", 750.0, 12.0, 225.0)
+        )
+        await db.commit()
+        legacy_id = cur.lastrowid
+
+    # Reset schema version to 0 to simulate pre-migration state
+    async with temp_db._connect() as db:
+        await db.execute("DELETE FROM schema_version")
+        await db.commit()
+
+    # Run migrations
+    await temp_db.run_migrations()
+
+    # Schema version should be at least 1
+    ver = await temp_db.get_schema_version()
+    assert ver >= 1
+
+    # drinks_detail should now be populated for the legacy record
+    history = await temp_db.get_user_drink_history(99, -1001)
+    assert len(history) == 1
+    assert history[0]["category"] == "вино"
+    assert history[0]["pure_alcohol_g"] > 0
+
+
