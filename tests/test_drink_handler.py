@@ -8,12 +8,12 @@ from bot.handlers import drink_parser
 
 @pytest.mark.asyncio
 async def test_auto_detection_disabled_ignores_regular_messages(monkeypatch):
-    monkeypatch.setattr(drink_parser.settings, "auto_detect_drinks", False)
     message = SimpleNamespace(
         text="выпил 4 литра водки",
         from_user=SimpleNamespace(id=1),
     )
     db = AsyncMock()
+    db.get_auto_detect_drinks.return_value = False
     parse_message = Mock()
     monkeypatch.setattr(drink_parser, "parse_natural_drink_text", parse_message)
 
@@ -25,7 +25,6 @@ async def test_auto_detection_disabled_ignores_regular_messages(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_drink_command_works_when_auto_detection_is_disabled(monkeypatch):
-    monkeypatch.setattr(drink_parser.settings, "auto_detect_drinks", False)
     user = SimpleNamespace(id=1)
     db = AsyncMock()
     message = SimpleNamespace(

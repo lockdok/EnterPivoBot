@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any
 
 # Current schema version. Bump this when adding new migrations.
-CURRENT_SCHEMA_VERSION = 1
+CURRENT_SCHEMA_VERSION = 2
 
 
 class Database:
@@ -71,7 +71,8 @@ class Database:
                 CREATE TABLE IF NOT EXISTS chat_settings (
                     chat_id INTEGER PRIMARY KEY,
                     roast_chance REAL DEFAULT 0.20,
-                    timezone TEXT DEFAULT 'Europe/Moscow'
+                    timezone TEXT DEFAULT 'Europe/Moscow',
+                    auto_detect_drinks INTEGER
                 )
             """)
 
@@ -119,6 +120,17 @@ class Database:
             await self._backfill_drinks_detail()
             await self._set_schema_version(1)
 
+        if current < 2:
+            async with self._connect() as db:
+                async with db.execute("PRAGMA table_info(chat_settings)") as cur:
+                    columns = await cur.fetchall()
+                if not any(column[1] == "auto_detect_drinks" for column in columns):
+                    await db.execute(
+                        "ALTER TABLE chat_settings ADD COLUMN auto_detect_drinks INTEGER"
+                    )
+                await db.commit()
+            await self._set_schema_version(2)
+
     async def _backfill_drinks_detail(self):
         """Fill drinks_detail for all existing drinks that have no detail row."""
         from bot.services.classifier import classify_drink, calculate_pure_alcohol_grams
@@ -157,6 +169,44 @@ class Database:
                     full_name = excluded.full_name
             """, (user_id, chat_id, username, full_name))
             await db.commit()
+
+    # ------------------------------------------------------------------
+    # Chat settings
+    # ------------------------------------------------------------------
+
+    async def get_auto_detect_drinks(self, chat_id: int, default: bool = False) -> bool:
+        """Return the chat override, or the configured default if unset."""
+        async with self._connect() as db:
+            async with db.execute(
+                "SELECT auto_detect_drinks FROM chat_settings WHERE chat_id = ?",
+                (chat_id,)
+            ) as cur:
+                row = await cur.fetchone()
+                if not row or row[0] is None:
+                    return default
+                return bool(row[0])
+
+    async def toggle_auto_detect_drinks(self, chat_id: int, default: bool = False) -> bool:
+        """Toggle the chat override and return its new value."""
+        async with self._connect() as db:
+            await db.execute(
+                "INSERT OR IGNORE INTO chat_settings (chat_id) VALUES (?)",
+                (chat_id,)
+            )
+            async with db.execute(
+                "SELECT auto_detect_drinks FROM chat_settings WHERE chat_id = ?",
+                (chat_id,)
+            ) as cur:
+                row = await cur.fetchone()
+
+            current = bool(row[0]) if row and row[0] is not None else default
+            enabled = not current
+            await db.execute(
+                "UPDATE chat_settings SET auto_detect_drinks = ? WHERE chat_id = ?",
+                (int(enabled), chat_id)
+            )
+            await db.commit()
+            return enabled
 
     # ------------------------------------------------------------------
     # Drinks

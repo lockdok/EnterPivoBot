@@ -140,7 +140,14 @@ async def cmd_cancel(message: types.Message, db: Database):
 @router.callback_query(F.data.startswith("vol:"))
 async def callback_volume_selected(callback: types.CallbackQuery, db: Database):
     """Handle volume button click."""
-    if not settings.auto_detect_drinks:
+    callback_message = callback.message
+    if not isinstance(callback_message, types.Message):
+        await callback.answer("Кнопка больше недоступна.")
+        return
+    if not await db.get_auto_detect_drinks(
+        callback_message.chat.id,
+        default=settings.auto_detect_drinks
+    ):
         await callback.answer("Автораспознавание выключено.")
         return
 
@@ -152,7 +159,7 @@ async def callback_volume_selected(callback: types.CallbackQuery, db: Database):
     abv = get_default_abv_for_drink(drink_name)
     if abv is not None:
         await record_and_notify_drink(
-            message=callback.message,
+            message=callback_message,
             db=db,
             user=callback.from_user,
             drink_name=drink_name,
@@ -163,7 +170,7 @@ async def callback_volume_selected(callback: types.CallbackQuery, db: Database):
     else:
         # Ask for ABV
         kb = get_abv_clarification_keyboard(volume_ml, drink_name)
-        await callback.message.edit_text(
+        await callback_message.edit_text(
             f"👌 Объём: **{volume_ml:.0f} мл** ({drink_name}).\n"
             f"Теперь выберите крепость напитка (ABV %):",
             reply_markup=kb,
@@ -175,7 +182,14 @@ async def callback_volume_selected(callback: types.CallbackQuery, db: Database):
 @router.callback_query(F.data.startswith("abv:"))
 async def callback_abv_selected(callback: types.CallbackQuery, db: Database):
     """Handle ABV button click."""
-    if not settings.auto_detect_drinks:
+    callback_message = callback.message
+    if not isinstance(callback_message, types.Message):
+        await callback.answer("Кнопка больше недоступна.")
+        return
+    if not await db.get_auto_detect_drinks(
+        callback_message.chat.id,
+        default=settings.auto_detect_drinks
+    ):
         await callback.answer("Автораспознавание выключено.")
         return
 
@@ -185,7 +199,7 @@ async def callback_abv_selected(callback: types.CallbackQuery, db: Database):
     drink_name = parts[3]
 
     await record_and_notify_drink(
-        message=callback.message,
+        message=callback_message,
         db=db,
         user=callback.from_user,
         drink_name=drink_name,
@@ -210,6 +224,11 @@ async def process_natural_text(message: types.Message, db: Database):
         return
 
     if not message.text or not message.from_user:
+        return
+    if not await db.get_auto_detect_drinks(
+        message.chat.id,
+        default=settings.auto_detect_drinks
+    ):
         return
 
     # Skip commands

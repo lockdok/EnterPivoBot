@@ -45,6 +45,35 @@ async def test_upsert_user_and_add_drink(temp_db):
 
 
 @pytest.mark.asyncio
+async def test_auto_detection_setting_is_scoped_to_each_chat(temp_db):
+    assert await temp_db.get_auto_detect_drinks(-1001) is False
+    assert await temp_db.toggle_auto_detect_drinks(-1001) is True
+    assert await temp_db.get_auto_detect_drinks(-1001) is True
+    assert await temp_db.get_auto_detect_drinks(-1002) is False
+    assert await temp_db.toggle_auto_detect_drinks(-1001) is False
+
+
+@pytest.mark.asyncio
+async def test_chat_settings_migration_adds_auto_detection_column(temp_db):
+    async with temp_db._connect() as db:
+        await db.execute("DROP TABLE chat_settings")
+        await db.execute("""
+            CREATE TABLE chat_settings (
+                chat_id INTEGER PRIMARY KEY,
+                roast_chance REAL DEFAULT 0.20,
+                timezone TEXT DEFAULT 'Europe/Moscow'
+            )
+        """)
+        await db.execute("INSERT INTO schema_version (version) VALUES (1)")
+        await db.commit()
+
+    await temp_db.run_migrations()
+
+    assert await temp_db.get_auto_detect_drinks(-1001, default=True) is True
+    assert await temp_db.get_schema_version() == 2
+
+
+@pytest.mark.asyncio
 async def test_leaderboard(temp_db):
     await temp_db.upsert_user(1, -1001, "drinker1", "Ivan")
     await temp_db.upsert_user(2, -1001, "drinker2", "Petr")
@@ -163,7 +192,7 @@ async def test_migrations_and_backfill(temp_db):
 
     # Schema version should be at least 1
     ver = await temp_db.get_schema_version()
-    assert ver >= 1
+    assert ver >= 2
 
     # drinks_detail should now be populated for the legacy record
     history = await temp_db.get_user_drink_history(99, -1001)

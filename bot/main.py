@@ -30,6 +30,7 @@ BOT_COMMANDS = [
     BotCommand(command="top",      description="Топ-5 чата за неделю и месяц"),
     BotCommand(command="winner",   description="Действующий алкобарон месяца"),
     BotCommand(command="cancel",   description="Отменить последнюю запись"),
+    BotCommand(command="settings", description="Настройки автораспознавания в чате"),
     BotCommand(command="help",     description="Как пользоваться ботом"),
 ]
 
