@@ -1,7 +1,7 @@
 """Roaster handler for mocking the monthly winner."""
 import random
 import logging
-from aiogram import Router, types
+from aiogram import Router, types, F
 from aiogram.filters import Command
 from bot.database.db import Database
 from bot.services.phrases import get_random_winner_roast
@@ -12,6 +12,7 @@ router = Router(name="roaster")
 
 
 @router.message(Command("roast", "подкол"))
+@router.message(F.text.casefold().in_({"подкол", "роаст"}))
 async def cmd_manual_roast(message: types.Message, db: Database):
     """Manually test a roast for the active monthly winner or the caller."""
     active_winner = await db.get_active_monthly_winner(message.chat.id)

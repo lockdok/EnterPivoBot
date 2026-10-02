@@ -3,6 +3,7 @@ import logging
 from aiogram import Router, types, F
 from aiogram.filters import Command
 from bot.database.db import Database
+from bot.config import settings
 from bot.services.calculator import calculate_vodka_equivalent, get_default_abv_for_drink
 from bot.services.parser import parse_natural_drink_text
 from bot.services.phrases import (
@@ -139,6 +140,10 @@ async def cmd_cancel(message: types.Message, db: Database):
 @router.callback_query(F.data.startswith("vol:"))
 async def callback_volume_selected(callback: types.CallbackQuery, db: Database):
     """Handle volume button click."""
+    if not settings.auto_detect_drinks:
+        await callback.answer("Автораспознавание выключено.")
+        return
+
     parts = callback.data.split(":")
     volume_ml = float(parts[1])
     drink_name = parts[2]
@@ -170,6 +175,10 @@ async def callback_volume_selected(callback: types.CallbackQuery, db: Database):
 @router.callback_query(F.data.startswith("abv:"))
 async def callback_abv_selected(callback: types.CallbackQuery, db: Database):
     """Handle ABV button click."""
+    if not settings.auto_detect_drinks:
+        await callback.answer("Автораспознавание выключено.")
+        return
+
     parts = callback.data.split(":")
     abv = float(parts[1])
     volume_ml = float(parts[2])
@@ -197,6 +206,9 @@ async def callback_cancel(callback: types.CallbackQuery):
 @router.message(F.text)
 async def process_natural_text(message: types.Message, db: Database):
     """Parse incoming text messages for natural drinking reports."""
+    if not settings.auto_detect_drinks:
+        return
+
     if not message.text or not message.from_user:
         return
 

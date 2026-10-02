@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     database_path: str = Field(default="bot_data.db", validation_alias="DATABASE_PATH")
     timezone: str = Field(default="Europe/Moscow", validation_alias="TIMEZONE")
     roast_probability: float = Field(default=0.20, validation_alias="ROAST_PROBABILITY")
+    auto_detect_drinks: bool = Field(default=False, validation_alias="AUTO_DETECT_DRINKS")
 
     model_config = SettingsConfigDict(
         env_file=".env",

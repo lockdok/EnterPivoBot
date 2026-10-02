@@ -86,7 +86,10 @@ BOT_TOKEN=123456789:ABCdefGHIjklMNOpqrsTUVwxyz
 DATABASE_PATH=bot_data.db
 TIMEZONE=Europe/Moscow
 ROAST_PROBABILITY=0.20
+AUTO_DETECT_DRINKS=false
 ```
+
+`AUTO_DETECT_DRINKS` включает или отключает распознавание сообщений о напитках. По умолчанию оно выключено; команда `/drink` работает независимо от этой настройки.
 
 ### 3. Запуск бота
 ```bash
