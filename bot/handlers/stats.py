@@ -23,15 +23,16 @@ async def cmd_stats(message: types.Message, db: Database):
     active_winner = await db.get_active_monthly_winner(chat_id)
     is_winner = bool(active_winner and active_winner.get("user_id") == user_id)
 
-    status_badge = "🏆😵‍💫 **[ОФИЦИАЛЬНЫЙ АЛКОБАРОН МЕСЯЦА]**\n" if is_winner else ""
+    status_badge = "🏆😵‍💫 <b>[ОФИЦИАЛЬНЫЙ АЛКОБАРОН МЕСЯЦА]</b>\n" if is_winner else ""
 
     text = (
-        f"📊 **Личное дело алконавта {message.from_user.mention_markdown(message.from_user.full_name)}:**\n"
+        f'📊 <b>Личное дело алконавта <a href="tg://user?id={user_id}">'
+        f"{html.escape(message.from_user.full_name)}</a>:</b>\n"
         f"{status_badge}\n"
-        f"• **Сегодня**: {stats['today_vodka']} мл водки ({stats['today_count']} раз)\n"
-        f"• **На этой неделе**: {stats['week_vodka']} мл водки ({stats['week_count']} раз)\n"
-        f"• **В этом месяце**: {stats['month_vodka']} мл водки ({stats['month_count']} раз)\n"
-        f"• **За всё время**: {stats['total_vodka']} мл водки ({stats['total_count']} раз)\n\n"
+        f"• <b>Сегодня</b>: {stats['today_vodka']} мл водки ({stats['today_count']} раз)\n"
+        f"• <b>На этой неделе</b>: {stats['week_vodka']} мл водки ({stats['week_count']} раз)\n"
+        f"• <b>В этом месяце</b>: {stats['month_vodka']} мл водки ({stats['month_count']} раз)\n"
+        f"• <b>За всё время</b>: {stats['total_vodka']} мл водки ({stats['total_count']} раз)\n\n"
     )
 
     if stats["total_vodka"] == 0:
@@ -43,7 +44,7 @@ async def cmd_stats(message: types.Message, db: Database):
     else:
         text += "👌 Показатели в пределах нормы (по меркам нашего бара)."
 
-    await message.reply(text, parse_mode="Markdown")
+    await message.reply(text, parse_mode="HTML")
 
 
 @router.message(Command("top", "топ"))
@@ -147,5 +148,3 @@ async def cmd_mystats(message: types.Message, db: Database):
 
     full_text = "\n".join(lines)
     await message.reply(full_text, parse_mode="HTML")
-
-
